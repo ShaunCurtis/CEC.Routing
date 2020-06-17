@@ -1,11 +1,11 @@
 ﻿# CEC.Routing
 Controlled Routing Library
 
-This is a enhanced version of the standard Blazor router with functionality added to control routing on a edit page when there are unsaved changes.
+This is a enhanced version of the standard Blazor router with functionality added to control routing on an edit page when there are unsaved changes.
 
 The Package is available via NuGet as: CEC.Routing.
 
-The sample project uses the basic Blazor Weather app, implementing a WeatherForecast object editor with navigation control when a Weather Station object is unsaved.  Review the code for a more detailed code example of an implemenatation of the router.
+The sample project uses the basic Blazor Weather app, implementing a WeatherForecast object editor with navigation control when a Weather Station object is unsaved.  Review the code for a more detailed implemantation code example.
 
 To implement the router you need to:
 
@@ -34,19 +34,19 @@ Add the following code below the blazor.server.js script block to the _Host.html
         };
     </script>
 
-This warns the user when navigating to another site through the URL bar of the browser or an external link. The browser doesn't give you the control to stop this, just warn the user.  I wish the browser window had a page APP setting to control this!  The message that appears is browser specific, so you won't necessarily get the message you ask for.
+This warns the user when navigating to another site through the URL bar of the browser or via an external link. The browser doesn't give you the control to stop this, just warn the user.  I wish the browser window had a page APP setting to control this!  The message that appears is browser specific, you won't necessarily get the message you ask for.
 
-At this point you are up and running.  The router acts and behaves like the standard Blazor router.  There's a RouterSessionService running that controls the router when certain properties are set, but by default it's vanilla Blazor routing.
+You should be up and running.  The router acts and behaves like the standard Blazor router.  There's a RouterSessionService running that controls the router when an active IRecordRouterComponent page is registered with the service, but by default it's vanilla Blazor routing.
 
-To implement controlled routing, you need to implement the IRecordRouterComponent interface on your editor component and register your component with the RouterSessionService.
+To conntrol routing, you need to implement the IRecordRouterComponent interface on your editor component and register that component with the RouterSessionService when it loads.
 
-In the example project there's a EditorComponentBase class that does most of the boiler plating.  The key activities are in the OnInitialized event:
+In the example project there's a EditorComponentBase class that implements most of the boiler plate code.  The key activities are in the OnInitialized event:
 
-            this.PageUrl = this.NavManager.Uri;
             this.RouterSessionService.ActiveComponent = this;
+            this.PageUrl = this.NavManager.Uri;
             this.RouterSessionService.NavigationCancelled += OnNavigationCancelled;
 
-The current component is registered with the RouterSessionSerive, the current page url  is set, and a local handler is registered with the navigation cancelled event on the service. Note that this event is triggered by the router.
+The current component is registered with the RouterSessionSerive, the current page url  is set, and a local handler is registered with the NavigationCancelled event on the service. Note that this event is triggered by the router.
 
 The OnNavigationCancelled event handler in the sampl;e project looks like this:
 

@@ -19,7 +19,7 @@ namespace CEC.Routing.Components
         /// Injected User Session Object
         /// </summary>
         [Inject]
-        public UserSessionService UserSessionService { get; set; }
+        public RouterSessionService RouterSessionService { get; set; }
 
         /// <summary>
         /// Property to hold the current page Url

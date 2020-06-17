@@ -8,7 +8,7 @@ namespace CEC.Routing.Services
     /// Needs to be loaded as a Scoped Service
     /// 
     /// </summary>
-    public class UserSessionService
+    public class RouterSessionService
     {
         /// <summary>
         /// Property containing the currently loaded component if set

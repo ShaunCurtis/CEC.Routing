@@ -3,6 +3,11 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RazorLangVersion>3.0</RazorLangVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.9.0</Version>
+    <Authors>Shaun Curtis</Authors>
+    <Company>Cold Elm Ware</Company>
+    <Description>CEC.Routing is a Blazor Routing Library based on the Microsoft Router with additional control for unsaved pages</Description>
   </PropertyGroup>
 
 

@@ -51,7 +51,7 @@ namespace CEC.Routing.Router
 
         [Inject] private NavigationManager NavigationManager { get; set; }
 
-        [Inject] private UserSessionService UserSessionService { get; set; }
+        [Inject] private RouterSessionService UserSessionService { get; set; }
 
         [Inject] private INavigationInterception NavigationInterception { get; set; }
 

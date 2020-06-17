@@ -22,7 +22,7 @@ namespace CEC.RoutingSample.Components
         /// Injected User Session Object
         /// </summary>
         [Inject]
-        public UserSessionService UserSessionService { get; set; }
+        public RouterSessionService RouterSessionService { get; set; }
 
         /// <summary>
         /// IRecordRoutingComponent implementation
@@ -51,8 +51,9 @@ namespace CEC.RoutingSample.Components
 
         protected override Task OnInitializedAsync()
         {
-            this.UserSessionService.ActiveComponent = this;
-            this.UserSessionService.NavigationCancelled += OnNavigationCancelled;
+            this.PageUrl = this.NavManager.Uri;
+            this.RouterSessionService.ActiveComponent = this;
+            this.RouterSessionService.NavigationCancelled += OnNavigationCancelled;
             return base.OnInitializedAsync();
         }
 

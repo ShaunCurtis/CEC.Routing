@@ -7,7 +7,7 @@ namespace CEC.Routing
     {
         public static IServiceCollection AddCECRouting(this IServiceCollection services)
         {
-            services.AddScoped<UserSessionService>();
+            services.AddScoped<RouterSessionService>();
             return services;
         }
     }

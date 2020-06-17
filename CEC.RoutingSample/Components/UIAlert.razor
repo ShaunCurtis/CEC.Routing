@@ -1,0 +1,22 @@
+﻿@namespace CEC.RoutingSample.Components
+
+@if (this.IsAlert)
+{
+    @if (Boxing)
+    {
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="@this.Css  @Alert.CSS" role="alert">
+                    @((MarkupString)Alert.Message)
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="@this.Css no-margin @Alert.CSS" role="alert">
+            @((MarkupString)Alert.Message)
+        </div>
+    }
+
+}

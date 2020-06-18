@@ -4,16 +4,31 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RazorLangVersion>3.0</RazorLangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.9.0</Version>
+    <Version>0.9.1</Version>
     <Authors>Shaun Curtis</Authors>
     <Company>Cold Elm Ware</Company>
     <Description>CEC.Routing is a Blazor Routing Library based on the Microsoft Router with additional control for unsaved pages</Description>
+    <PackageIcon>CEC.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/ShaunCurtis/CEC.Routing/</RepositoryUrl>
+    <RepositoryType>Github</RepositoryType>
+    <AssemblyVersion>0.9.1.0</AssemblyVersion>
+    <FileVersion>0.9.1.0</FileVersion>
+    <Copyright>ColdElmWare</Copyright>
   </PropertyGroup>
 
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components" Version="3.1.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="3.1.5" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="E:\Shaun\Work\CEC\Theme\CEC.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

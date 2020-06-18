@@ -1,9 +1,13 @@
 ﻿# CEC.Routing
 Controlled Routing Library
 
-This is a enhanced version of the standard Blazor router with functionality added to control routing on a edit page when there are unsaved changes.
+This is an enhanced version of the standard Blazor Router.  It adds functionality to control routing on a editor page when there are unsaved changes.
 
-The sample project uses the basic Blazor Weather app, implementing a WeatherForecast object editor with navigation control when a Weather Station object is unsaved.  Review the code for a more detailed code example of an implemenatation of the router.
+The package is available on NuGet: CEC.Routing.
+
+The sample project uses the basic Blazor Weather app, implementing a WeatherForecast object editor with navigation control when a Weather Station object is unsaved.  Review the code for a more detailed code example of an implementation of the router.
+
+There is an additional project and library at https://github.com/ShaunCurtis/CEC.FormControls that implements more advanced router control using enhanced form controls.
 
 To implement the router you need to:
 

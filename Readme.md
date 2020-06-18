@@ -46,7 +46,7 @@ In the example project there's a EditorComponentBase class that does most of the
 
 The current component is registered with the RouterSessionSerive, the current page url  is set, and a local handler is registered with the navigation cancelled event on the service. Note that this event is triggered by the router.
 
-The OnNavigationCancelled event handler in the sampl;e project looks like this:
+The OnNavigationCancelled event handler in the sample project looks like this:
 
         protected void OnNavigationCancelled(object sender, EventArgs e)
         {

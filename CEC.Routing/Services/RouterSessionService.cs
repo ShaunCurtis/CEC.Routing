@@ -36,11 +36,25 @@ namespace CEC.Routing.Services
         public event EventHandler NavigationCancelled;
 
         /// <summary>
+        /// Event to notify that Intra Page Navigation has taken place
+        /// useful when using Querystring controlled pages
+        /// </summary>
+        public event EventHandler IntraPageNavigation;
+
+        /// <summary>
         /// Method to trigger the NavigationCancelled Event
         /// </summary>
         public void TriggerNavigationCancelledEvent()
         {
             this.NavigationCancelled?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Method to trigger the IntraPageNavigation Event
+        /// </summary>
+        public void TriggerIntraPageNavigation()
+        {
+            this.IntraPageNavigation?.Invoke(this, EventArgs.Empty);
         }
 
     }

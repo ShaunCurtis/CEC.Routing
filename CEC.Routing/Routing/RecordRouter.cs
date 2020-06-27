@@ -179,6 +179,9 @@ namespace CEC.Routing.Router
 
         private void OnLocationChanged(object sender, LocationChangedEventArgs args)
         {
+            // Get the Page Uri minus any query string
+            var pageurl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")): this.NavigationManager.Uri ;
+            
             _locationAbsolute = args.Location;
             // SCC ADDED - SessionState Check for Unsaved Page
             if (_renderHandle.IsInitialized && Routes != null && this.UserSessionService.IsGoodToNavigate)
@@ -202,7 +205,8 @@ namespace CEC.Routing.Router
                     this.NavigationManager.NavigateTo(this.UserSessionService.PageUrl);
                 }
             }
-            UserSessionService.LastPageUrl = UserSessionService.PageUrl;
+            if (UserSessionService.LastPageUrl != null && UserSessionService.LastPageUrl.Equals(pageurl, StringComparison.CurrentCultureIgnoreCase)) UserSessionService.TriggerIntraPageNavigation();
+            UserSessionService.LastPageUrl = pageurl;
         }
 
         Task IHandleAfterRender.OnAfterRenderAsync()

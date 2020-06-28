@@ -8,13 +8,14 @@
     <Authors>Shaun Curtis</Authors>
     <Company>Cold Elm Ware</Company>
     <Description>CEC.Routing is a Blazor Routing Library based on the Microsoft Router with additional control for unsaved pages</Description>
-    <PackageIcon>CEC.png</PackageIcon>
+    <PackageIcon>ColdElm.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/ShaunCurtis/CEC.Routing/</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
     <FileVersion>1.0.1.0</FileVersion>
     <Copyright>ColdElmWare</Copyright>
+    <PackageReleaseNotes>See GitHub Repo</PackageReleaseNotes>
   </PropertyGroup>
 
 
@@ -25,7 +26,7 @@
 
 
   <ItemGroup>
-    <None Include="E:\Shaun\Work\CEC\Theme\CEC.png">
+    <None Include="..\..\CEC.FormControls\CEC.FormControls\ColdElm.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>

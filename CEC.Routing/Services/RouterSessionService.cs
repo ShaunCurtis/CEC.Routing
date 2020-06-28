@@ -31,6 +31,11 @@ namespace CEC.Routing.Services
         public string LastPageUrl { get; set; }
 
         /// <summary>
+        /// Url of the navigation cancelled page
+        /// </summary>
+        public string NavigationCancelledUrl { get; set; }
+
+        /// <summary>
         /// Event to notify Navigation Cancellation
         /// </summary>
         public event EventHandler NavigationCancelled;

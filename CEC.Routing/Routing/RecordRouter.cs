@@ -51,7 +51,7 @@ namespace CEC.Routing.Router
 
         [Inject] private NavigationManager NavigationManager { get; set; }
 
-        [Inject] private RouterSessionService UserSessionService { get; set; }
+        [Inject] private RouterSessionService RouterSessionService { get; set; }
 
         [Inject] private INavigationInterception NavigationInterception { get; set; }
 
@@ -184,29 +184,31 @@ namespace CEC.Routing.Router
             
             _locationAbsolute = args.Location;
             // SCC ADDED - SessionState Check for Unsaved Page
-            if (_renderHandle.IsInitialized && Routes != null && this.UserSessionService.IsGoodToNavigate)
+            if (_renderHandle.IsInitialized && Routes != null && this.RouterSessionService.IsGoodToNavigate)
             {
                 // Clear the Active Component - let the next page load itslef into it if required
-                this.UserSessionService.ActiveComponent = null;
+                this.RouterSessionService.ActiveComponent = null;
                 Refresh(args.IsNavigationIntercepted);
             }
             else
             {
                 // SCC ADDED - Trigger a Navigation Cancelled Event on the SessionStateService
-                if (this.UserSessionService.PageUrl.Equals(_locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
+                if (this.RouterSessionService.PageUrl.Equals(_locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
                 {
                     // Cancel routing
-                    this.UserSessionService.TriggerNavigationCancelledEvent();
+                    this.RouterSessionService.TriggerNavigationCancelledEvent();
                 }
                 else
                 {
                     //  we're cancelling routing, but the Navigation Manager is current set to the aborted page
-                    //  so we do a dummy trip through the Navigation Manager again to set this back to the original page
-                    this.NavigationManager.NavigateTo(this.UserSessionService.PageUrl);
+                    //  so we set the navigation cancelled url so the page can navigate to it if necessary
+                    //  and do a dummy trip through the Navigation Manager again to set this back to the original page
+                    this.RouterSessionService.NavigationCancelledUrl = this.NavigationManager.Uri;
+                    this.NavigationManager.NavigateTo(this.RouterSessionService.PageUrl);
                 }
             }
-            if (UserSessionService.LastPageUrl != null && UserSessionService.LastPageUrl.Equals(pageurl, StringComparison.CurrentCultureIgnoreCase)) UserSessionService.TriggerIntraPageNavigation();
-            UserSessionService.LastPageUrl = pageurl;
+            if (RouterSessionService.LastPageUrl != null && RouterSessionService.LastPageUrl.Equals(pageurl, StringComparison.CurrentCultureIgnoreCase)) RouterSessionService.TriggerIntraPageNavigation();
+            RouterSessionService.LastPageUrl = pageurl;
         }
 
         Task IHandleAfterRender.OnAfterRenderAsync()

@@ -53,7 +53,7 @@ namespace CEC.RoutingSample.Pages
         protected void CheckForChanges()
         {
             this.IsClean = true;
-            this.IsClean = this.Record.Date.Equals(this.ShadowRecord.Date) ? this.IsClean : false;
+            this.IsClean = this.Record.Date.Date.Equals(this.ShadowRecord.Date.Date) ? this.IsClean : false;
             this.IsClean = this.Record.TemperatureC.Equals(this.ShadowRecord.TemperatureC) ? this.IsClean : false;
             if (string.IsNullOrEmpty(this.Record.Summary) && !string.IsNullOrEmpty(this.ShadowRecord.Summary)) this.IsClean = false;
             else if (string.IsNullOrEmpty(this.ShadowRecord.Summary) && !string.IsNullOrEmpty(this.Record.Summary)) this.IsClean = false;
@@ -88,8 +88,10 @@ namespace CEC.RoutingSample.Pages
         protected void ConfirmExit()
         {
             // To Escape with a dirty component override the component to clean
+            // and get the page the user eas trying to navigate to
             this.IsClean = true;
-            this.NavManager.NavigateTo("/Index");
+            if (!string.IsNullOrEmpty(this.RouterSessionService.NavigationCancelledUrl)) this.NavManager.NavigateTo(this.RouterSessionService.NavigationCancelledUrl);
+            else this.NavManager.NavigateTo("/");
         }
 
     }

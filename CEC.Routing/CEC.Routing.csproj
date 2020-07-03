@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <RazorLangVersion>3.0</RazorLangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Authors>Shaun Curtis</Authors>
     <Company>Cold Elm Ware</Company>
     <Description>CEC.Routing is a Blazor Routing Library based on the Microsoft Router with additional control for unsaved pages</Description>
@@ -12,8 +12,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/ShaunCurtis/CEC.Routing/</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Copyright>ColdElmWare</Copyright>
     <PackageReleaseNotes>See GitHub Repo</PackageReleaseNotes>
   </PropertyGroup>

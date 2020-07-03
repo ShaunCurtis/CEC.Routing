@@ -30,13 +30,7 @@ Change your App.razor to use the new router:
 
 Add the following code below the blazor.server.js script block to the _Host.html file:
 
-    <script>
-        window.onbeforeunload = function () {
-            return "Do you really want to leave?";
-        };
-    </script>
-
-This warns the user when navigating to another site through the URL bar of the browser or an external link. The browser doesn't give you the control to stop this, just warn the user.  Oh for a browser that has a page APP setting to control this!  The message that appears is browser specific, so you won't necessarily get the message you ask for.
+    <script src="_content/CEC.Routing/cec.routing.js"></script>
 
 At this point you are up and running.  The router acts and behaves like the standard Blazor router.  The router interacts with a RouterSessionService and only controls routing when certain properties are set, but by default it's vanilla Blazor routing.
 

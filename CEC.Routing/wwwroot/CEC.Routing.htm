@@ -1,0 +1,1128 @@
+<html>
+
+<head>
+    <meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+    <meta name=Generator content="Microsoft Word 15 (filtered)">
+    <link rel="stylesheet" href="help.css" />
+
+</head>
+
+<body lang=EN-GB link=blue vlink="#877589">
+
+    <div class=WordSection1>
+
+        <p class=MsoTitle>CEC.Routing</p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <p class=MsoNormal>
+            Single Page Applications have several issues running
+            as applications in a web browser.   One such issue is navigation: the user can navigate away from the page in
+            a variety of ways and we have little control over what happens.  Data loss often occurs in a less than satisfactory experience for the user.
+        </p>
+
+        <p class=MsoNormal>
+            This library seeks to address the following navigation
+            issues:
+        </p>
+
+        <p class=MsoListParagraphCxSpFirst style='text-indent:-18.0pt'>
+            1.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Intercepting
+            and potentially cancelling intra-application routing when the page is dirty.
+        </p>
+
+        <p class=MsoListParagraphCxSpLast style='text-indent:-18.0pt'>
+            2.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Intercepting
+            and warning on navigation away from the application - there’s no browser
+            mechanism to prevent this.  Entering a new URL in the URL bar, clicking on a
+            favourite, …
+        </p>
+
+        <h1>Library and Example Repositories</h1>
+
+        <p class=MsoNormal>
+            <b>CEC.Routing</b> is my implementation of the standard
+            Blazor router with functionality needed to control intra-application routing
+            and onbeforeunload behaviour.  It’s released and available as a Nuget
+            Package. The source code is available at <a href="https://github.com/ShaunCurtis/CEC.Routing">https://github.com/ShaunCurtis/CEC.Routing</a>.
+        </p>
+
+        <p class=MsoListParagraph style='margin-left:0cm'>
+            All the source code is
+            available under the MIT license.
+        </p>
+
+        <h1>Intra-Application Routing</h1>
+
+        <p class=MsoNormal>
+            Intercept routing on a dirty i.e. unsaved data page is
+            not possible with the out-of-the-box Blazor navigator/router.  Not only that, the
+            methods and properties we need to override aren’t exposed, so, it's start
+            from scratch.
+        </p>
+
+        <p class=MsoNormal>
+            A quick digression here to explain the
+            basics of Blazor navigation/routing.  DOM navigation events – anchors, etc –
+            are captured by the Blazor JavaScript Interop code.  They surface in the C# Blazor
+            world through the NavigationManager.  The user clicks on an HTML link or navlink
+            in the browser, the NavigationManager service instance gets populated with the
+            relevant URL data and the <b>NavigationManager</b>.<i>LocationChanged</i> event
+            is fired.  That’s it for the NavigationManager.  The heavy lifting is done by
+            the Router.  It gets initialized through app.razor on a page load, and wires
+            itself into the <b>NavigationManager</b>.<i>LocationChanged</i> event.  The
+            developer has no access to its internal workings, so can’t cancel anything.
+        </p>
+
+        <p class=MsoNormal>
+            Fortunately, we can clone the standard router and add the
+            necessary functionality.  My new router is called RecordRouter.  The key changes
+            to the out-of-the-box router are as follows:
+        </p>
+
+        <h2>RouterSessionService</h2>
+
+        <p class=MsoNormal>
+            Create a new scoped Service called RouterSessionService for
+            controlling and interacting with the RecordRouter.
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>    public class RouterSessionService</span></p>
+
+        <p class=Code><span style='color:black'>    {</span></p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Property containing the
+                currently loaded component if set
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public IRecordRoutingComponent
+                ActiveComponent { get; set; }
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Boolean to check if the
+                Router Should Navigate
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public bool IsGoodToNavigate
+                =&gt; this.ActiveComponent?.IsClean ?? true;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Url of Current Page being
+                navigated from
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public string PageUrl =&gt;
+                this.ActiveComponent?.PageUrl ?? string.Empty;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code><span style='color:black'>        /// Url of the previous page</span></p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public string LastPageUrl {
+                get; set; }
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Url of the navigation
+                cancelled page
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public string
+                NavigationCancelledUrl { get; set; }
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Event to notify Navigation
+                Cancellation
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public event EventHandler
+                NavigationCancelled;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Event to notify that Intra
+                Page Navigation has taken place
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// useful when using
+                Querystring controlled pages
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public event EventHandler
+                IntraPageNavigation;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                private readonly IJSRuntime
+                _js;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                private bool _ExitShowState {
+                get; set; }
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public
+                RouterSessionService(IJSRuntime js) =&gt; _js = js;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Method to trigger the
+                NavigationCancelled Event
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public void
+                TriggerNavigationCancelledEvent() =&gt; this.NavigationCancelled?.Invoke(this,
+                EventArgs.Empty);
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Method to trigger the IntraPageNavigation
+                Event
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public void
+                TriggerIntraPageNavigation() =&gt; this.IntraPageNavigation?.Invoke(this,
+                EventArgs.Empty);
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>        /// &lt;summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// Method to set or unset the
+                browser onbeforeexit challenge
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        /// &lt;/summary&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                /// &lt;param
+                name=&quot;action&quot;&gt;&lt;/param&gt;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                ///
+                &lt;returns&gt;&lt;/returns&gt;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public void
+                SetPageExitCheck(bool show)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if (show != _ExitShowState)
+                _js.InvokeAsync&lt;bool&gt;(&quot;cec_setEditorExitCheck&quot;, show);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            _ExitShowState = show;</span></p>
+
+        <p class=Code><span style='color:black'>        }</span></p>
+
+        <p class=Code><span style='color:black'>    }</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <h2>&nbsp;</h2>
+
+        <h2>RecordRouter</h2>
+
+        <p class=MsoNormal>
+            This is a straight clone of the shipped router.  The only
+            changes are in the <i>OnLocationChanged</i> event handler.  It now looks like
+            this:
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                private void
+                OnLocationChanged(object sender, LocationChangedEventArgs args)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                // Get the Page Uri minus
+                any query string
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                var pageurl =
+                this.NavigationManager.Uri.Contains(&quot;?&quot;) ?
+                this.NavigationManager.Uri.Substring(0,
+                this.NavigationManager.Uri.IndexOf(&quot;?&quot;)): this.NavigationManager.Uri
+                ;
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            </span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                _locationAbsolute =
+                args.Location;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                // CEC ADDED - SessionState
+                Check for Unsaved Page
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if (_renderHandle.IsInitialized
+                &amp;&amp; Routes != null &amp;&amp;
+                this.RouterSessionService.IsGoodToNavigate)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                // Clear the Active
+                Component - let the next page load itself into it if required
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.ActiveComponent = null;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.NavigationCancelledUrl
+                = null;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                Refresh(args.IsNavigationIntercepted);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            }</span></p>
+
+        <p class=Code><span style='color:black'>            else</span></p>
+
+        <p class=Code><span style='color:black'>            {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                // CEC ADDED - Trigger
+                a Navigation Cancelled Event on the SessionStateService
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if
+                (this.RouterSessionService.PageUrl.Equals(_locationAbsolute,
+                StringComparison.CurrentCultureIgnoreCase))
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>                {</span></p>
+
+        <p class=Code><span style='color:black'>                    // Cancel routing</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.TriggerNavigationCancelledEvent();
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>                }</span></p>
+
+        <p class=Code><span style='color:black'>                else</span></p>
+
+        <p class=Code><span style='color:black'>                {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                //  we're
+                cancelling routing, but the Navigation Manager is current set to the aborted
+                page
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                //  so we set the
+                navigation cancelled url so the page can navigate to it if necessary
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                //  and do a dummy
+                trip through the Navigation Manager again to set this back to the original page
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.NavigationCancelledUrl
+                = this.NavigationManager.Uri;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.NavigationManager.NavigateTo(this.RouterSessionService.PageUrl);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>                }</span></p>
+
+        <p class=Code><span style='color:black'>            }</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if
+                (RouterSessionService.LastPageUrl != null &amp;&amp;
+                RouterSessionService.LastPageUrl.Equals(pageurl,
+                StringComparison.CurrentCultureIgnoreCase))
+                RouterSessionService.TriggerIntraPageNavigation();
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                RouterSessionService.LastPageUrl = pageurl;
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        }</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <p class=MsoNormal>
+            On a <b>NavigationManager</b>.<i>LocationChanged</i> event,
+            the method:
+        </p>
+
+        <p class=MsoListParagraphCxSpFirst style='margin-left:18.0pt;text-indent:-18.0pt'>
+            1.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Gets
+            the page URL minus any query string, and checks if we are good to route. (I
+            like to use query strings – more flexible than routing in many instances) 
+        </p>
+
+        <p class=MsoListParagraphCxSpMiddle style='margin-left:39.6pt;text-indent:-21.6pt'>
+            1.1.<span class="num-list">&nbsp;&nbsp;&nbsp; </span><b>Yes</b> - clear
+            out the relevant fields on the <b>RouterSessionService</b> and route through
+            the <i>Refresh</i> method. 
+        </p>
+
+        <p class=MsoListParagraphCxSpMiddle style='margin-left:39.6pt;text-indent:-21.6pt'>
+            1.2.<span class="num-list">&nbsp;&nbsp;&nbsp; </span><b>No</b> - trigger
+            a <i>NavigationCancelled</i> event.  We solve the displayed URL issue by making
+            a dummy run through navigation to reset the displayed URL.  Anyone know a
+            better way?
+        </p>
+
+        <p class=MsoListParagraphCxSpLast style='margin-left:18.0pt;text-indent:-18.0pt'>
+            2.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Check
+            for Intra-Page Navigation and trigger the <i>IntraPageNavigation</i> event if
+            needed.  Useful for URLs with query strings.
+        </p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <p class=MsoNormal>
+            The routing is controlled by the <i>IsGoodToNavigate</i>
+            property on the <b>RouterSessionService</b>.
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public bool IsGoodToNavigate
+                =&gt; this.ActiveComponent?.IsClean ?? true;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            This is only false – when we cancel routing - if the <i>ActiveComponent</i>
+            exists and is dirty.  A lot of coding/refactoring to make a binary check!
+        </p>
+
+        <h2>Setting up you site to use the Router</h2>
+
+        <p class=MsoNormal>Install the Nuget Package</p>
+
+        <h6>Startup.cs</h6>
+
+        <p class=MsoNormal style='text-indent:18.0pt'>Add the CECRouting services</p>
+
+        <p class=Code><span style='color:black'>using CEC.Routing;</span></p>
+
+        <p class=Code><span style='color:black'> &nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:#569CD6'>public</span><span style='color:black'>&nbsp;</span><span style='color:#569CD6'>void</span><span style='color:black'>&nbsp;ConfigureServices(</span><span style='color:#569CD6'>IServiceCollection</span><span style='color:black'>&nbsp;services)</span>
+        </p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</span></p>
+
+        <p class=Code><span style='color:black'>….</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;services.AddCECRouting();</span></p>
+
+        <p class=Code><span style='color:black'>….</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <h6>_Imports.razor</h6>
+
+        <p class=MsoNormal style='text-indent:18.0pt'>
+            Add the following namespace
+            references
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>@using CEC.Routing</span></p>
+
+        <p class=Code><span style='color:black'>@using CEC.Routing.Services</span></p>
+
+        <p class=Code><span style='color:black'>@using CEC.Routing.Router</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <h6>App.razor</h6>
+
+        <p class=MsoNormal>Change the name of the Router to RecordRouter</p>
+
+        <p class=Code><span style='color:gray'>&nbsp;</span></p>
+
+        <p class=Code>
+            <span style='color:gray'>&lt;</span><span style='color:#F44747'>RecordRouter</span><span style='color:#D4D4D4'>&nbsp;</span><span style='color:#9CDCFE'>AppAssembly</span><span style='color:#D4D4D4'>=</span><span style='color:black'>&quot;</span><span style='color:#569CD6'>@</span><span style='color:black'>typeof(Program).Assembly&quot;</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;</span><span style='color:#F44747'>Found</span><span style='color:#D4D4D4'>&nbsp;</span><span style='color:#9CDCFE'>Context</span><span style='color:#D4D4D4'>=</span><span style='color:black'>&quot;routeData&quot;</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;</span><span style='color:#F44747'>RouteView</span><span style='color:#D4D4D4'>&nbsp;</span><span style='color:#9CDCFE'>RouteData</span><span style='color:#D4D4D4'>=</span><span style='color:black'>&quot;</span><span style='color:#569CD6'>@</span><span style='color:black'>routeData&quot;</span><span style='color:#D4D4D4'>&nbsp;</span><span style='color:#9CDCFE'>DefaultLayout</span><span style='color:#D4D4D4'>=</span><span style='color:black'>&quot;</span><span style='color:#569CD6'>@</span><span style='color:black'>typeof(MainLayout)&quot;</span><span style='color:gray'>&nbsp;/&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;/</span><span style='color:#F44747'>Found</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;</span><span style='color:#F44747'>NotFound</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;</span><span style='color:#F44747'>LayoutView</span><span style='color:#D4D4D4'>&nbsp;</span><span style='color:#9CDCFE'>Layout</span><span style='color:#D4D4D4'>=</span><span style='color:black'>&quot;</span><span style='color:#569CD6'>@</span><span style='color:black'>typeof(MainLayout)&quot;</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;</span><span style='color:#569CD6'>p</span><span style='color:gray'>&gt;</span><span style='color:#D4D4D4'>Sorry,&nbsp;there's&nbsp;nothing&nbsp;at&nbsp;this&nbsp;address.</span><span style='color:gray'>&lt;/</span><span style='color:#569CD6'>p</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;/</span><span style='color:#F44747'>LayoutView</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:#D4D4D4'>&nbsp;&nbsp;&nbsp;&nbsp;</span><span style='color:gray'>&lt;/</span><span style='color:#F44747'>NotFound</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code>
+            <span style='color:gray'>&lt;/</span><span style='color:#F44747'>RecordRouter</span><span style='color:gray'>&gt;</span>
+        </p>
+
+        <p class=Code><span style='color:#D4D4D4'>&nbsp;</span></p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <h2>Implementing the Router</h2>
+
+        <p class=MsoNormal>
+            There’s a sample site on the Github repository demonstrating
+            the use of the library on a WeatherForecast editor.
+        </p>
+
+        <p class=MsoNormal>
+            NOTE - Record routing only kicks in if you set up a page
+            component to use it.  Normal pages will route as normal: you don’t need to
+            configure them.
+        </p>
+
+        <p class=MsoNormal>
+            You interact with the router through the <b>RouterSessionService</b>.
+            To configure a page to use the extra routing functionality:
+        </p>
+
+        <p class=MsoListParagraphCxSpFirst style='margin-left:18.0pt;text-indent:-18.0pt'>
+            1.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Inject
+            the service into any edit page.
+        </p>
+
+        <p class=MsoListParagraphCxSpLast style='margin-left:18.0pt;text-indent:-18.0pt'>
+            2.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Implement
+            the <b><i>IRecordRoutingComponent</i></b> Interface on the page
+        </p>
+
+        <p class=MsoNormal>
+            Next you need to add an event handler for the navigation cancelled
+            event.  This should contain code to tell the user that navigation was cancelled
+            and potentially ask them if they really want to leave the page.
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                protected virtual void
+                OnNavigationCancelled(object sender, EventArgs e)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.NavigationCancelled =
+                true;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.ShowExitConfirmation =
+                true;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.AlertMessage.SetAlert(&quot;&lt;b&gt;THIS RECORD ISN'T SAVED&lt;/b&gt;.
+                Either &lt;i&gt;Save&lt;/i&gt; or &lt;i&gt;Exit Without
+                Saving&lt;/i&gt;.&quot;, Alert.AlertDanger);
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                InvokeAsync(this.StateHasChanged);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        }</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            This one (from the <b>EditRecordComponentBase</b>
+            boilerplate in the project):
+        </p>
+
+        <p class=MsoListParagraphCxSpFirst style='margin-left:18.0pt;text-indent:-18.0pt'>
+            1.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Sets
+            a couple of local properties – used in controlling which buttons display when.
+        </p>
+
+        <p class=MsoListParagraphCxSpMiddle style='margin-left:18.0pt;text-indent:-18.0pt'>
+            2.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Sets
+            an alert box to display.
+        </p>
+
+        <p class=MsoListParagraphCxSpLast style='margin-left:18.0pt;text-indent:-18.0pt'>
+            3.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Calls
+            <i>StateHasChanged</i> to refresh the UI.
+        </p>
+
+        <p class=MsoNormal>
+            Add the following code to the component <i>OnInitialized</i>
+            or <i>OnInitializedAsync</i> event
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.PageUrl =
+                this.NavManager.Uri;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.ActiveComponent = this;
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.NavigationCancelled
+                += this.OnNavigationCancelled;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <p class=MsoNormal>This:</p>
+
+        <p class=MsoListParagraphCxSpFirst style='margin-left:18.0pt;text-indent:-18.0pt'>
+            1.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Sets
+            the <b><i>PageURL</i></b> property to the current URL (pages names/directories
+            and routing URLs are now very different).
+        </p>
+
+        <p class=MsoListParagraphCxSpMiddle style='margin-left:18.0pt;text-indent:-18.0pt'>
+            2.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Sets
+            the <b>RouterSessionService</b> <i>ActiveComponent</i> reference to the
+            component.
+        </p>
+
+        <p class=MsoListParagraphCxSpLast style='margin-left:18.0pt;text-indent:-18.0pt'>
+            3.<span class="num-list">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Attaches
+            the above event hander to the <b>RouterSessionService</b> <i>NavigationCancelled</i>
+            Event.
+        </p>
+
+        <p class=MsoNormal>
+            The final bit of the jigsaw is connecting the <b>IRecordRoutingComponent</b>.<i>IsClean</i>
+            property.  It’s important to get this right.  The router uses this property to
+            route/cancel routing.
+        </p>
+
+        <p class=MsoNormal>
+            In my projects it’s wired directly to the <i>IsClean </i>property
+            on the specific data service associated with the record.  It get set when the
+            record in the service changes.
+        </p>
+
+        <p class=MsoNormal>
+            In the CEC.Routing sample project it’s set and unset in the <i>CheckForChanges</i>
+            method which is called whenever an edit control is changed.
+        </p>
+
+        <p class=MsoNormal>
+            The following code shows how to override cancel routing –
+            say if the user has clicked on exit anyway.
+        </p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;protected&nbsp;void&nbsp;ConfirmExit()</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.IsClean&nbsp;=&nbsp;true;</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(!string.IsNullOrEmpty(this.RouterSessionService.NavigationCancelledUrl))&nbsp;this.NavManager.NavigateTo(this.RouterSessionService.NavigationCancelledUrl);</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                else if (!string.IsNullOrEmpty(this.RouterSessionService.LastPageUrl))
+                this.NavManager.NavigateTo(this.RouterSessionService.LastPageUrl);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else&nbsp;this.NavManager.NavigateTo(&quot;/&quot;);</span></p>
+
+        <p class=Code><span style='color:black'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            Note that the <b>RouterSessionService</b> holds the
+            cancelled URL.
+        </p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <h1>Intercepting/Warning on external Navigation</h1>
+
+        <p class=MsoNormal>
+            You can’t lock down the browser window to stop this – I wish
+            we could.  The only control browsers offer is the <i>onbeforeunload</i> event. 
+            When a function is registered on this event, the browser displays a popup warning
+            dialog, giving the user the option to cancel navigation.  The degree of control,
+            what appears in the box, and what you need the attached function to do differs
+            across browsers.
+        </p>
+
+        <p class=MsoNormal>
+            The sledgehammer approach is to add the following to your <b>_Host.html</b>
+            file:
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code><span style='color:black'>&lt;script&gt;</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                window.onbeforeunload = function ()
+                {
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                return &quot;Do you really want
+                to leave?&quot;;
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>    };</span></p>
+
+        <p class=Code><span style='color:black'>&lt;/script&gt;</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            However, it’s akin to using a wrecking ball to crack a nut. 
+            There are many instances where you want to leave the “application” – authentication,
+            print pages to name a couple.  Having the exit popup box coming up every time
+            is a pain.
+        </p>
+
+        <p class=MsoNormal>
+            CEC.Routing implements a more nuanced and focused
+            alternative.  It still uses the <i>onbeforeunload</i> event, but dynamically
+            registers and unregisters with the event as needed. i.e. only when a form is
+            dirty.
+        </p>
+
+        <h6>CEC.Routing.js</h6>
+
+        <p class=MsoNormal>
+            The client side Javascript files looks like this (pretty
+            self explanatory):
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                window.cec_setEditorExitCheck =
+                function (show) {
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>    if (show) {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                window.addEventListener(&quot;beforeunload&quot;, cec_showExitDialog);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>    }</span></p>
+
+        <p class=Code><span style='color:black'>    else {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                window.removeEventListener(&quot;beforeunload&quot;, cec_showExitDialog);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>    }</span></p>
+
+        <p class=Code><span style='color:black'>}</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                window.cec_showExitDialog = function
+                (event) {
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>    event.preventDefault();</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                event.returnValue = &quot;There are
+                unsaved changes on this page.  Do you want to leave?&quot;;
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>}</span></p>
+
+        <p class=MsoNormal>&nbsp;</p>
+
+        <p class=MsoNormal>The JSInterop code is implemented as a method in <b>RouteSessionService</b>.</p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                private bool _ExitShowState {
+                get; set; }
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                public void
+                SetPageExitCheck(bool show)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if (show != _ExitShowState)
+                _js.InvokeAsync&lt;bool&gt;(&quot;cec_setEditorExitCheck&quot;, show);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            _ExitShowState = show;</span></p>
+
+        <p class=Code><span style='color:black'>        }</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            Add the following script reference to the _Host.html next to
+            the blazor.server.js reference.
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                &lt;script
+                src=&quot;_content/CEC.Routing/cec.routing.js&quot;&gt;&lt;/script&gt;
+            </span>
+        </p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>In the CEC.Routing sample <b>WeatherForcastEditor</b>:</p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=Code>
+            <span style='color:black'>
+                protected void CheckClean(bool
+                setclean = false)
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>        {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                if (setclean) this.IsClean
+                = true;
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            if (this.IsClean)</span></p>
+
+        <p class=Code><span style='color:black'>            {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.Alert.ClearAlert();
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.SetPageExitCheck(false);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            }</span></p>
+
+        <p class=Code><span style='color:black'>            else</span></p>
+
+        <p class=Code><span style='color:black'>            {</span></p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.Alert.SetAlert(&quot;Forecast Changed&quot;, Alert.AlertWarning);
+            </span>
+        </p>
+
+        <p class=Code>
+            <span style='color:black'>
+                this.RouterSessionService.SetPageExitCheck(true);
+            </span>
+        </p>
+
+        <p class=Code><span style='color:black'>            }</span></p>
+
+        <p class=Code><span style='color:black'>        }</span></p>
+
+        <p class=Code>&nbsp;</p>
+
+        <p class=MsoNormal>
+            This method is called whenever from the <i>OnFieldChanged</i>
+            event handler and the <i>Save</i> and <i>ConfirmExit</i> methods.
+        </p>
+
+    </div>
+
+</body>
+
+</html>

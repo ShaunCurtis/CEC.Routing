@@ -1,5 +1,6 @@
 ﻿using System;
 using CEC.Routing.Components;
+using Microsoft.JSInterop;
 
 namespace CEC.Routing.Services
 {
@@ -18,12 +19,12 @@ namespace CEC.Routing.Services
         /// <summary>
         /// Boolean to check if the Router Should Navigate
         /// </summary>
-        public bool IsGoodToNavigate { get => this.ActiveComponent is null || (this.ActiveComponent != null && this.ActiveComponent.IsClean); }
+        public bool IsGoodToNavigate => this.ActiveComponent?.IsClean ?? true; 
 
         /// <summary>
         /// Url of Current Page being navigated from
         /// </summary>
-        public string PageUrl { get => this.ActiveComponent is null ? string.Empty : this.ActiveComponent.PageUrl; }
+        public string PageUrl => this.ActiveComponent?.PageUrl ?? string.Empty; 
 
         /// <summary>
         /// Url of the previous page
@@ -46,20 +47,31 @@ namespace CEC.Routing.Services
         /// </summary>
         public event EventHandler IntraPageNavigation;
 
+        private readonly IJSRuntime _js;
+
+        private bool _ExitShowState { get; set; }
+
+        public RouterSessionService(IJSRuntime js) => _js = js;
+
         /// <summary>
         /// Method to trigger the NavigationCancelled Event
         /// </summary>
-        public void TriggerNavigationCancelledEvent()
-        {
-            this.NavigationCancelled?.Invoke(this, EventArgs.Empty);
-        }
+        public void TriggerNavigationCancelledEvent() => this.NavigationCancelled?.Invoke(this, EventArgs.Empty);
 
         /// <summary>
         /// Method to trigger the IntraPageNavigation Event
         /// </summary>
-        public void TriggerIntraPageNavigation()
+        public void TriggerIntraPageNavigation() => this.IntraPageNavigation?.Invoke(this, EventArgs.Empty);
+
+        /// <summary>
+        /// Method to set or unset the browser onbeforeexit challenge
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public void SetPageExitCheck(bool show)
         {
-            this.IntraPageNavigation?.Invoke(this, EventArgs.Empty);
+            if (show != _ExitShowState) _js.InvokeAsync<bool>("cec_setEditorExitCheck", show);
+            _ExitShowState = show;
         }
 
     }

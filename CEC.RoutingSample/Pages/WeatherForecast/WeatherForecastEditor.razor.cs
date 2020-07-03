@@ -2,8 +2,6 @@
 using CEC.RoutingSample.Data;
 using Microsoft.AspNetCore.Components.Forms;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace CEC.RoutingSample.Pages
@@ -40,10 +38,7 @@ namespace CEC.RoutingSample.Pages
         {
             this.ExitAttempt = false;
             this.CheckForChanges();
-            // opens the Alert if the record is dirty
-            if (this.IsClean) this.Alert.ClearAlert();
-            else this.Alert.SetAlert("Forecast Changed", Alert.AlertWarning);
-
+            this.CheckClean();
         }
 
         /// <summary>
@@ -60,13 +55,28 @@ namespace CEC.RoutingSample.Pages
             else if (!this.Record.Summary.Equals(this.ShadowRecord.Summary)) this.IsClean = false;
         }
 
+        protected void CheckClean(bool setclean = false)
+        {
+            if (setclean) this.IsClean = true;
+            if (this.IsClean)
+            {
+                this.Alert.ClearAlert();
+                this.RouterSessionService.SetPageExitCheck(false);
+            }
+            else
+            {
+                this.Alert.SetAlert("Forecast Changed", Alert.AlertWarning);
+                this.RouterSessionService.SetPageExitCheck(true);
+            }
+        }
+
         /// <summary>
         /// Save Method called from the Button
         /// </summary>
         protected void Save()
         {
             this.ShadowRecord = this.Record.Copy();
-            this.IsClean = true;
+            this.CheckClean(true);
             this.Alert.SetAlert("Forecast Saved", Alert.AlertSuccess);
             this.StateHasChanged();
         }
@@ -77,8 +87,7 @@ namespace CEC.RoutingSample.Pages
         protected void Cancel()
         {
             this.ExitAttempt = false;
-            if (this.IsClean) this.Alert.ClearAlert();
-            else this.Alert.SetAlert("Forecast Changed", Alert.AlertWarning);
+            this.CheckClean();
             this.StateHasChanged();
         }
 
@@ -89,8 +98,9 @@ namespace CEC.RoutingSample.Pages
         {
             // To Escape with a dirty component override the component to clean
             // and get the page the user eas trying to navigate to
-            this.IsClean = true;
+            this.CheckClean(true);
             if (!string.IsNullOrEmpty(this.RouterSessionService.NavigationCancelledUrl)) this.NavManager.NavigateTo(this.RouterSessionService.NavigationCancelledUrl);
+            else if (!string.IsNullOrEmpty(this.RouterSessionService.LastPageUrl)) this.NavManager.NavigateTo(this.RouterSessionService.LastPageUrl);
             else this.NavManager.NavigateTo("/");
         }
 

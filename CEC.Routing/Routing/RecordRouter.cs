@@ -18,7 +18,7 @@ namespace CEC.Routing.Router
      *  - OnLocationChanged Event Receiver checks for an Unsaved Page
      *      and if so cancels navigation and triggers the NavigationCancelled Event of the SessionStateService
      *  
-     *  Also had to copy various other classes as they are decalred internal to 
+     *  Also had to copy various other classes as they are declared internal to 
      *  Microsoft.AspNetCore.Components.Routing and therefore can't be referenced:
      *   - HashCodeCombine.cs
      *   - OptionalTypeRouteConstraint.cs
@@ -186,8 +186,9 @@ namespace CEC.Routing.Router
             // SCC ADDED - SessionState Check for Unsaved Page
             if (_renderHandle.IsInitialized && Routes != null && this.RouterSessionService.IsGoodToNavigate)
             {
-                // Clear the Active Component - let the next page load itslef into it if required
+                // Clear the Active Component - the next page will load itself if required
                 this.RouterSessionService.ActiveComponent = null;
+                this.RouterSessionService.NavigationCancelledUrl = null;
                 Refresh(args.IsNavigationIntercepted);
             }
             else

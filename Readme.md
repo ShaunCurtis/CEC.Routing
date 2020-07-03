@@ -57,4 +57,5 @@ What ties everything together is the IsClean property on the IRecordRouterCompon
 
 How you implement control of the IsClean property and what you do on the NavigationCancelled event is up to you.  The example project demonstrates a simple implementation.
 
-
+Updates:
+1.0.1 - https://github.com/ShaunCurtis/CEC.Routing/wiki/1.0.1-Updates

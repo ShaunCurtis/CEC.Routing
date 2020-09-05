@@ -27,7 +27,13 @@ namespace CEC.RoutingSample.Components
         /// <summary>
         /// IRecordRoutingComponent implementation
         /// </summary>
+        [Obsolete]
         public string PageUrl { get; set; }
+
+        /// <summary>
+        /// IRecordRoutingComponent implementation
+        /// </summary>
+        public string RouteUrl { get; set; }
 
         /// <summary>
         /// IRecordRoutingComponent implementation
@@ -51,7 +57,7 @@ namespace CEC.RoutingSample.Components
 
         protected override Task OnInitializedAsync()
         {
-            this.PageUrl = this.NavManager.Uri;
+            this.RouteUrl = this.NavManager.Uri;
             this.RouterSessionService.ActiveComponent = this;
             this.RouterSessionService.NavigationCancelled += OnNavigationCancelled;
             return base.OnInitializedAsync();

@@ -15,7 +15,7 @@ namespace CEC.Routing.Router
      * This is a direct copy of the Blazor Router with the following changes:
      *  -  Injection of SessionStateService
      *  
-     *  - OnLocationChanged Event Receiver checks for an Unsaved Page
+     *  - OnLocationChanged Event Receiver checks for an Unsaved Component
      *      and if so cancels navigation and triggers the NavigationCancelled Event of the SessionStateService
      *  
      *  Also had to copy various other classes as they are declared internal to 
@@ -35,7 +35,7 @@ namespace CEC.Routing.Router
       ======================================================================*/
 
     /// <summary>
-    /// A customized Router to handle unsaved pages
+    /// A customized Router to handle routing away from an unsaved Component
     /// </summary>
     public class RecordRouter : IComponent, IHandleAfterRender, IDisposable
     {
@@ -115,6 +115,8 @@ namespace CEC.Routing.Router
                 throw new InvalidOperationException($"The {nameof(Router)} component requires a value for the parameter {nameof(NotFound)}.");
             }
 
+            RouterSessionService.LastRouteUrl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")) : this.NavigationManager.Uri;
+
 
             var assemblies = AdditionalAssemblies == null ? new[] { AppAssembly } : new[] { AppAssembly }.Concat(AdditionalAssemblies);
             Routes = RouteTableFactory.Create(assemblies);
@@ -177,16 +179,22 @@ namespace CEC.Routing.Router
             }
         }
 
-        private void OnLocationChanged(object sender, LocationChangedEventArgs args)
+        private async void OnLocationChanged(object sender, LocationChangedEventArgs args)
         {
-            // Get the Page Uri minus any query string
-            var pageurl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")): this.NavigationManager.Uri ;
-            
+            // Get the Route Uri minus any query string
+            var routeurl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")): this.NavigationManager.Uri ;
+
+            // Sets the LastRouteUrl to detect same route navigation i.e. "/Record/Editor?id=1" & "/Record/Editor?id=2"
+            // and saves the previous route to ReturnRouteUrl for exit actions
+            if (RouterSessionService.LastRouteUrl != null && RouterSessionService.LastRouteUrl.Equals(routeurl, StringComparison.CurrentCultureIgnoreCase)) RouterSessionService.TriggerSameComponentNavigation();
+            else RouterSessionService.ReturnRouteUrl = RouterSessionService.LastRouteUrl;
+            RouterSessionService.LastRouteUrl = routeurl;
+
             _locationAbsolute = args.Location;
-            // SCC ADDED - SessionState Check for Unsaved Page
+            // SCC ADDED - SessionState Check for Unsaved Component
             if (_renderHandle.IsInitialized && Routes != null && this.RouterSessionService.IsGoodToNavigate)
             {
-                // Clear the Active Component - the next page will load itself if required
+                // Clear the Active Component - the next route will load itself if required
                 this.RouterSessionService.ActiveComponent = null;
                 this.RouterSessionService.NavigationCancelledUrl = null;
                 Refresh(args.IsNavigationIntercepted);
@@ -194,22 +202,39 @@ namespace CEC.Routing.Router
             else
             {
                 // SCC ADDED - Trigger a Navigation Cancelled Event on the SessionStateService
-                if (this.RouterSessionService.PageUrl.Equals(_locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
+                if (this.RouterSessionService.RouteUrl.Equals(_locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
                 {
                     // Cancel routing
                     this.RouterSessionService.TriggerNavigationCancelledEvent();
                 }
                 else
                 {
-                    //  we're cancelling routing, but the Navigation Manager is current set to the aborted page
-                    //  so we set the navigation cancelled url so the page can navigate to it if necessary
-                    //  and do a dummy trip through the Navigation Manager again to set this back to the original page
+                    //  we're cancelling routing, but the Navigation Manager is current set to the aborted route
+                    //  so we set the navigation cancelled url so the route can navigate to it if necessary
+                    //  and do a reset trip through the Navigation Manager again to set this back to the original route
+                    //  We need to do this though an async method as at the moment in WASM we are blocking the only thread: other
+                    //  OnLocationChanged events handlers below us in the list haven't yet been called.
+                    //  If we just initiate another navigation event calling NavigationManager.NavigateTo(), components such as NavLinks
+                    //  will receive notification of the second event before the first (and thus highlight the wrong link!)
+                    //  So we make this method async, wrap NavigationManager.NavigateTo() in an async method with a small yielded delay, and await the method.
+                    //  The default delay can be overridden through the IRecordRoutingComponent interface on any component by setting the RouterDelay property.  Default is 50ms.
                     this.RouterSessionService.NavigationCancelledUrl = this.NavigationManager.Uri;
-                    this.NavigationManager.NavigateTo(this.RouterSessionService.PageUrl);
+                    await ReNavigate();
                 }
             }
-            if (RouterSessionService.LastPageUrl != null && RouterSessionService.LastPageUrl.Equals(pageurl, StringComparison.CurrentCultureIgnoreCase)) RouterSessionService.TriggerIntraPageNavigation();
-            RouterSessionService.LastPageUrl = pageurl;
+        }
+
+        /// <summary>
+        /// Async Method for the dummy run through the Navigator if we have cancelled navigation to set the URL back to the original.
+        /// Allows yielding so that other OnLocationChanged Events can be run - and stops OnlocationChanged Events arriving in the wrong order
+        /// NavLinks being one!
+        /// </summary>
+        /// <returns></returns>
+        private async Task ReNavigate()
+        {
+            var delay = this.RouterSessionService?.ActiveComponent?.RouterDelay ?? 50;
+            await Task.Delay(delay);
+            this.NavigationManager.NavigateTo(this.RouterSessionService.RouteUrl);
         }
 
         Task IHandleAfterRender.OnAfterRenderAsync()

@@ -1,5 +1,7 @@
 ﻿using CEC.Routing.Services;
 using Microsoft.AspNetCore.Components;
+using System;
+using System.Security.Cryptography.X509Certificates;
 
 namespace CEC.Routing.Components
 {
@@ -24,8 +26,16 @@ namespace CEC.Routing.Components
         /// <summary>
         /// Property to hold the current page Url
         /// We need this as the name of the component probably won't match the route
+        ///  Should now use RouteURL
         /// </summary>
+        [Obsolete]
         public string PageUrl { get; set; }
+
+        /// <summary>
+        /// Property to hold the current route Url
+        /// We need this as the name of the component probably won't match the route
+        /// </summary>
+        public string RouteUrl { get => PageUrl; }
 
         /// <summary>
         /// Property to reflect the save state of the component
@@ -33,6 +43,13 @@ namespace CEC.Routing.Components
         /// Checked by the router to see if we should cancel routing
         /// </summary>
         public bool IsClean { get; }
+
+        /// <summary>
+        /// Property to define the delay period before reloading
+        /// Needed for WASM Apps as single threaded and blocking
+        /// ms delay for task before doing dummy run through the Navigation Manager
+        /// </summary>
+        public int RouterDelay { get => 50; set { var x = value; } }
 
     }
 }

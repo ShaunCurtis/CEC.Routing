@@ -24,7 +24,7 @@ namespace CEC.RoutingSample.Pages
             this.ShadowRecord = this.Record.Copy();
 
             // Get the actual page Url from the Navigation Manager
-            this.PageUrl = this.NavManager.Uri;
+            this.RouteUrl = this.NavManager.Uri;
 
             return base.OnInitializedAsync();
         }
@@ -100,7 +100,7 @@ namespace CEC.RoutingSample.Pages
             // and get the page the user eas trying to navigate to
             this.CheckClean(true);
             if (!string.IsNullOrEmpty(this.RouterSessionService.NavigationCancelledUrl)) this.NavManager.NavigateTo(this.RouterSessionService.NavigationCancelledUrl);
-            else if (!string.IsNullOrEmpty(this.RouterSessionService.LastPageUrl)) this.NavManager.NavigateTo(this.RouterSessionService.LastPageUrl);
+            else if (!string.IsNullOrEmpty(this.RouterSessionService.LastRouteUrl)) this.NavManager.NavigateTo(this.RouterSessionService.LastRouteUrl);
             else this.NavManager.NavigateTo("/");
         }
 

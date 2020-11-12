@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CEC.RoutingSample.Components
 {
-    public class EditorComponentBase : ComponentBase, IRecordRoutingComponent
+    public class EditorComponentBase : ComponentBase, IRecordRoutingComponent, IDisposable
     {
 
         /// <summary>
@@ -75,5 +75,9 @@ namespace CEC.RoutingSample.Components
             this.StateHasChanged();
         }
 
+        public void Dispose()
+        {
+            this.RouterSessionService.NavigationCancelled -= OnNavigationCancelled;
+        }
     }
 }

@@ -1,8 +1,10 @@
 ﻿# CEC.Routing
+
+> **Note**.  There is a more radical solution to the whole routing issue covered in an article [An Alternative to Routing in Blazor](https://github.com/ShaunCurtis/CEC.Blazor.Examples/blob/master/Articles/Replacing%20Blazor%20Routing%20with%20ViewManager.md), a Github Repo [CEC.Blazor.Examples](https://github.com/ShaunCurtis/CEC.Blazor.Examples) and a [demo site](https://cec-blazor-examples.azurewebsites.net/).
+
 Controlled Routing Library
 
 > Note Version 1.2 is released.  There are some import **Obselete** marked changes.
-
 
 This is an enhanced version of the standard Blazor Router.  It adds functionality to control routing on a editor page with unsaved changes.
 

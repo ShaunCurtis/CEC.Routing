@@ -19,10 +19,10 @@ namespace CEC.Routing.Router
             _parser = parser;
         }
 
-        public override bool Match(string pathSegment, out object convertedValue)
+        public override bool Match(string pathSegment, out object? convertedValue)
         {
             // Unset values are set to null in the Parameters object created in
-            // the RouteContext. To match this pattern, unset optional parmeters
+            // the RouteContext. To match this pattern, unset optional parameters
             // are converted to null.
             if (string.IsNullOrEmpty(pathSegment))
             {

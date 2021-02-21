@@ -42,16 +42,16 @@
             <div class="col-4 text-right">
                 @if (this.ExitAttempt)
                 {
-                    <button type="button" class="btn btn-warning" @onclick="this.Cancel">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="this.ConfirmExit">Exit Without Save</button>
+                    <button type="button" class="btn btn-warning ml-2" @onclick="this.Cancel">Cancel</button>
+                    <button type="button" class="btn btn-danger ml-2" @onclick="this.ConfirmExit">Exit Without Save</button>
                 }
                 @if (!this.IsClean)
                 {
-                    <button type="button" class="btn btn-success" @onclick="this.Save">Save</button>
+                    <button type="button" class="btn btn-success ml-2" @onclick="this.Save">Save</button>
                 }
                 @if (this.IsClean)
                 {
-                    <button type="button" class="btn btn-primary" @onclick="this.ConfirmExit">Exit</button>
+                    <button type="button" class="btn btn-primary ml-2" @onclick="this.ConfirmExit">Exit</button>
                 }
             </div>
         </div>

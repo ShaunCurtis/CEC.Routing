@@ -8,7 +8,7 @@ namespace CEC.Routing.Router
 {
     internal class RouteContext
     {
-        private static char[] Separator = new[] { '/' };
+        private static readonly char[] Separator = new[] { '/' };
 
         public RouteContext(string path)
         {
@@ -24,8 +24,8 @@ namespace CEC.Routing.Router
 
         public string[] Segments { get; }
 
-        public Type Handler { get; set; }
+        public Type? Handler { get; set; }
 
-        public IReadOnlyDictionary<string, object> Parameters { get; set; }
+        public IReadOnlyDictionary<string, object>? Parameters { get; set; }
     }
 }

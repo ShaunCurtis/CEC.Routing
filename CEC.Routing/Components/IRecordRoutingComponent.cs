@@ -24,18 +24,10 @@ namespace CEC.Routing.Components
         public RouterSessionService RouterSessionService { get; set; }
 
         /// <summary>
-        /// Property to hold the current page Url
-        /// We need this as the name of the component probably won't match the route
-        ///  Should now use RouteURL
-        /// </summary>
-        [Obsolete]
-        public string PageUrl { get; set; }
-
-        /// <summary>
         /// Property to hold the current route Url
         /// We need this as the name of the component probably won't match the route
         /// </summary>
-        public string RouteUrl { get => PageUrl; }
+        public string RouteUrl { get; set; }
 
         /// <summary>
         /// Property to reflect the save state of the component

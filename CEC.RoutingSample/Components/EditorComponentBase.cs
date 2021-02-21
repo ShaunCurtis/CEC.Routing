@@ -27,12 +27,6 @@ namespace CEC.RoutingSample.Components
         /// <summary>
         /// IRecordRoutingComponent implementation
         /// </summary>
-        [Obsolete]
-        public string PageUrl { get; set; }
-
-        /// <summary>
-        /// IRecordRoutingComponent implementation
-        /// </summary>
         public string RouteUrl { get; set; }
 
         /// <summary>

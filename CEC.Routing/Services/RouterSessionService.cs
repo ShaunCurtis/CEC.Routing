@@ -1,7 +1,8 @@
 ﻿using System;
 using CEC.Routing.Components;
 using Microsoft.JSInterop;
-using Microsoft.Extensions.Configuration;
+
+#nullable disable warnings
 
 namespace CEC.Routing.Services
 {
@@ -27,19 +28,11 @@ namespace CEC.Routing.Services
         /// </summary>
         public string RouteUrl { get
             {
-                var url = this.ActiveComponent?.PageUrl ?? string.Empty;
+                var url = this.ActiveComponent?.RouteUrl ?? string.Empty;
                 url = this.ActiveComponent?.RouteUrl ?? url;
                 return url;
             }
         }
-
-        /// <summary>
-        /// Url of Current Page being navigated from
-        /// This Property is depreciated after version 1.1
-        /// Use RouteURL
-        /// </summary>
-        [Obsolete]
-        public string PageUrl => RouteUrl;
 
         /// <summary>
         /// Url of the previous Route
@@ -50,14 +43,6 @@ namespace CEC.Routing.Services
         /// Url of the Last Route
         /// </summary>
         public string LastRouteUrl { get; set; }
-
-        /// <summary>
-        /// Url of the Last Route
-        /// This Property is depreciated after version 1.1
-        /// Use LastRouteURL
-        /// </summary>
-        [Obsolete]
-        public string LastPageUrl => LastRouteUrl;
 
         /// <summary>
         /// Url of the navigation cancelled page
@@ -75,16 +60,7 @@ namespace CEC.Routing.Services
         /// </summary>
         public event EventHandler SameComponentNavigation;
 
-        /// <summary>
-        /// Event to notify that Intra Page Navigation has taken place
-        /// useful when using Querystring controlled pages
-        /// This Event Handler is depreciated after version 1.1
-        /// use SameComponentNavigation
-        /// </summary>
-        [Obsolete]
-        public event EventHandler IntraPageNavigation;
-
-        private readonly IJSRuntime _js;
+        private IJSRuntime _js;
 
         private bool _ExitShowState { get; set; }
 
@@ -104,19 +80,6 @@ namespace CEC.Routing.Services
         public void TriggerSameComponentNavigation() 
         {
             this.SameComponentNavigation?.Invoke(this, EventArgs.Empty);
-            this.IntraPageNavigation?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// Method to trigger the IntraPageNavigation Event
-        /// This Event Trigger is depreciated after version 1.1
-        /// use TriggerSameComponentNavigation
-        /// </summary>
-        [Obsolete]
-        public void TriggerIntraPageNavigation()
-        {
-            this.SameComponentNavigation?.Invoke(this, EventArgs.Empty);
-            this.IntraPageNavigation?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -126,9 +89,50 @@ namespace CEC.Routing.Services
         /// <returns></returns>
         public void SetPageExitCheck(bool show)
         {
-            if (show != _ExitShowState) _js.InvokeAsync<bool>("cec_setEditorExitCheck", show);
+            if (show != _ExitShowState && this._js != null)
+                _js.InvokeAsync<bool>("cec_setEditorExitCheck", show);
+            else
+                show = false;
             _ExitShowState = show;
         }
 
+        public bool CanRoute(string url, string locationAbsolute, out bool reNavigate)
+        {
+            var okToRoute = true;
+            reNavigate = false;
+
+            // Get the Route Uri minus any query string
+            var routeurl = url.Contains("?") ? url.Substring(0, url.IndexOf("?")) : url;
+
+            // Sets the LastRouteUrl to detect same route navigation i.e. "/Record/Editor?id=1" & "/Record/Editor?id=2"
+            // and saves the previous route to ReturnRouteUrl for exit actions
+            if (this.LastRouteUrl != null && this.LastRouteUrl.Equals(routeurl, StringComparison.CurrentCultureIgnoreCase)) this.TriggerSameComponentNavigation();
+            else this.ReturnRouteUrl = this.LastRouteUrl;
+            this.LastRouteUrl = routeurl;
+            if (this.IsGoodToNavigate)
+            {
+                // Clear the Active Component - the next route will load itself if required
+                this.ActiveComponent = null;
+                this.NavigationCancelledUrl = null;
+            }
+            else
+            {
+                okToRoute = false;
+                if (this.RouteUrl.Equals(locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    // Cancel routing
+                    this.TriggerNavigationCancelledEvent();
+                }
+                else
+                {
+                    //  we're cancelling routing, but the Navigation Manager is current set to the aborted route
+                    //  so we set the navigation cancelled url so the route can navigate to it if necessary
+                    //  and tell the router to do a reset trip through the Navigation Manager again to set this back to the original route
+                    this.NavigationCancelledUrl = url;
+                    reNavigate = true;
+                }
+            }
+            return okToRoute;
+        }
     }
 }

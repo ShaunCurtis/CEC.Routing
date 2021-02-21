@@ -6,9 +6,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using origin =  Microsoft.AspNetCore.Components.Routing;
-using Microsoft.Extensions.Internal;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.Extensions.Internal;
 
 namespace CEC.Routing.Router
 {
@@ -189,7 +189,7 @@ namespace CEC.Routing.Router
                 Assemblies = assemblies;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return obj is Key other ? base.Equals(other) : false;
             }
@@ -200,7 +200,7 @@ namespace CEC.Routing.Router
                 {
                     return true;
                 }
-                else if (Assemblies == null ^ other.Assemblies == null)
+                else if ((Assemblies == null) || (other.Assemblies == null))
                 {
                     return false;
                 }
@@ -222,7 +222,7 @@ namespace CEC.Routing.Router
 
             public override int GetHashCode()
             {
-                var hash = new HashCodeCombiner();
+                var hash = new HashCode();
 
                 if (Assemblies != null)
                 {
@@ -232,7 +232,7 @@ namespace CEC.Routing.Router
                     }
                 }
 
-                return hash;
+                return hash.ToHashCode();
             }
         }
     }

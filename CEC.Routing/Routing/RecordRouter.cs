@@ -1,39 +1,53 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+/// =================================
+/// Modifications Author: Shaun Curtis, Cold Elm
+/// License: MIT
+/// ==================================
+
+
+/*=======================================================================
+ * This is a direct copy of the Blazor Router with the following changes:
+ *  -  Injection of SessionStateService
+ *  
+ *  - OnLocationChanged Event Receiver checks for an Unsaved Component
+ *      and if so cancels navigation and triggers the NavigationCancelled Event of the SessionStateService
+ *  
+ *  Also had to copy various other classes as they are declared internal to 
+ *  Microsoft.AspNetCore.Components.Routing and therefore can't be referenced:
+ *   - HashCodeCombine.cs
+ *   - NavigationContext.cs
+ *   - OptionalTypeRouteConstraint.cs
+ *   - RouteConstraint.cs
+ *   - RouteContext.cs
+ *   - RouteEntry.cs
+ *   - RouteTable.cs
+ *   - RouteTableFactory.cs
+ *   - RouteTemplate.cs
+ *   - TermplateParser.cs
+ *   - TemplateSegment.cs
+ *   - TypeRouteConstraint.cs
+ *   
+  ======================================================================*/
+
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using CEC.Routing.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Logging;
 
+#nullable disable warnings
+
 namespace CEC.Routing.Router
 {
-    /*=======================================================================
-     * This is a direct copy of the Blazor Router with the following changes:
-     *  -  Injection of SessionStateService
-     *  
-     *  - OnLocationChanged Event Receiver checks for an Unsaved Component
-     *      and if so cancels navigation and triggers the NavigationCancelled Event of the SessionStateService
-     *  
-     *  Also had to copy various other classes as they are declared internal to 
-     *  Microsoft.AspNetCore.Components.Routing and therefore can't be referenced:
-     *   - HashCodeCombine.cs
-     *   - OptionalTypeRouteConstraint.cs
-     *   - RouteConstraint.cs
-     *   - RouteContext.cs
-     *   - RouteEntry.cs
-     *   - RouteTable.cs
-     *   - RouteTableFactory.cs
-     *   - RouteTemplate.cs
-     *   - TermplateParser.cs
-     *   - TemplateSegment.cs
-     *   - TypeRouteConstraint.cs
-     *   
-      ======================================================================*/
-
     /// <summary>
     /// A customized Router to handle routing away from an unsaved Component
     /// </summary>
@@ -49,13 +63,21 @@ namespace CEC.Routing.Router
         bool _navigationInterceptionEnabled;
         ILogger<RecordRouter> _logger;
 
-        [Inject] private NavigationManager NavigationManager { get; set; }
+        private CancellationTokenSource _onNavigateCts;
 
-        [Inject] private RouterSessionService RouterSessionService { get; set; }
+        private Task _previousOnNavigateTask = Task.CompletedTask;
+
+        private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
+
+        private bool _onNavigateCalled = false;
+
+        [Inject] private NavigationManager NavigationManager { get; set; }
 
         [Inject] private INavigationInterception NavigationInterception { get; set; }
 
         [Inject] private ILoggerFactory LoggerFactory { get; set; }
+
+        [Inject] private RouterSessionService RouterSessionService { get; set; }
 
         /// <summary>
         /// Gets or sets the assembly that should be searched for components matching the URI.
@@ -78,6 +100,16 @@ namespace CEC.Routing.Router
         /// </summary>
         [Parameter] public RenderFragment<RouteData> Found { get; set; }
 
+        /// <summary>
+        /// Get or sets the content to display when asynchronous navigation is in progress.
+        /// </summary>
+        [Parameter] public RenderFragment? Navigating { get; set; }
+
+        /// <summary>
+        /// Gets or sets a handler that should be called before navigating to a new page.
+        /// </summary>
+        [Parameter] public EventCallback<NavigationContext> OnNavigateAsync { get; set; }
+
         private RouteTable Routes { get; set; }
 
         /// <inheritdoc />
@@ -87,11 +119,11 @@ namespace CEC.Routing.Router
             _renderHandle = renderHandle;
             _baseUri = NavigationManager.BaseUri;
             _locationAbsolute = NavigationManager.Uri;
-            NavigationManager.LocationChanged += this.OnLocationChanged;
+            NavigationManager.LocationChanged += OnLocationChanged;
         }
 
         /// <inheritdoc />
-        public Task SetParametersAsync(ParameterView parameters)
+        public async Task SetParametersAsync(ParameterView parameters)
         {
             parameters.SetParameterProperties(this);
 
@@ -115,13 +147,13 @@ namespace CEC.Routing.Router
                 throw new InvalidOperationException($"The {nameof(Router)} component requires a value for the parameter {nameof(NotFound)}.");
             }
 
-            RouterSessionService.LastRouteUrl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")) : this.NavigationManager.Uri;
+            if (!_onNavigateCalled)
+            {
+                _onNavigateCalled = true;
+                await RunOnNavigateAsync(NavigationManager.ToBaseRelativePath(_locationAbsolute), isNavigationIntercepted: false);
+            }
 
-
-            var assemblies = AdditionalAssemblies == null ? new[] { AppAssembly } : new[] { AppAssembly }.Concat(AdditionalAssemblies);
-            Routes = RouteTableFactory.Create(assemblies);
             Refresh(isNavigationIntercepted: false);
-            return Task.CompletedTask;
         }
 
         /// <inheritdoc />
@@ -138,8 +170,37 @@ namespace CEC.Routing.Router
                 : str.Substring(0, firstIndex);
         }
 
-        private void Refresh(bool isNavigationIntercepted)
+        private void RefreshRouteTable()
         {
+            var assemblies = AdditionalAssemblies == null ? new[] { AppAssembly } : new[] { AppAssembly }.Concat(AdditionalAssemblies);
+            var assembliesSet = new HashSet<Assembly>(assemblies);
+
+            if (!_assemblies.SetEquals(assembliesSet))
+            {
+                Routes = RouteTableFactory.Create(assemblies);
+                _assemblies.Clear();
+                _assemblies.UnionWith(assembliesSet);
+            }
+
+        }
+
+        internal virtual void Refresh(bool isNavigationIntercepted)
+        {
+            // If an `OnNavigateAsync` task is currently in progress, then wait
+            // for it to complete before rendering. Note: because _previousOnNavigateTask
+            // is initialized to a CompletedTask on initialization, this will still
+            // allow first-render to complete successfully.
+            if (_previousOnNavigateTask.Status != TaskStatus.RanToCompletion)
+            {
+                if (Navigating != null)
+                {
+                    _renderHandle.Render(Navigating);
+                }
+                return;
+            }
+
+            RefreshRouteTable();
+
             var locationPath = NavigationManager.ToBaseRelativePath(_locationAbsolute);
             locationPath = StringUntilAny(locationPath, _queryOrHashStartChar);
             var context = new RouteContext(locationPath);
@@ -179,48 +240,65 @@ namespace CEC.Routing.Router
             }
         }
 
-        private async void OnLocationChanged(object sender, LocationChangedEventArgs args)
+        internal async ValueTask RunOnNavigateAsync(string path, bool isNavigationIntercepted)
         {
-            // Get the Route Uri minus any query string
-            var routeurl = this.NavigationManager.Uri.Contains("?") ? this.NavigationManager.Uri.Substring(0, this.NavigationManager.Uri.IndexOf("?")): this.NavigationManager.Uri ;
+            // Cancel the CTS instead of disposing it, since disposing does not
+            // actually cancel and can cause unintended Object Disposed Exceptions.
+            // This effectivelly cancels the previously running task and completes it.
+            _onNavigateCts?.Cancel();
+            // Then make sure that the task has been completely cancelled or completed
+            // before starting the next one. This avoid race conditions where the cancellation
+            // for the previous task was set but not fully completed by the time we get to this
+            // invocation.
+            await _previousOnNavigateTask;
 
-            // Sets the LastRouteUrl to detect same route navigation i.e. "/Record/Editor?id=1" & "/Record/Editor?id=2"
-            // and saves the previous route to ReturnRouteUrl for exit actions
-            if (RouterSessionService.LastRouteUrl != null && RouterSessionService.LastRouteUrl.Equals(routeurl, StringComparison.CurrentCultureIgnoreCase)) RouterSessionService.TriggerSameComponentNavigation();
-            else RouterSessionService.ReturnRouteUrl = RouterSessionService.LastRouteUrl;
-            RouterSessionService.LastRouteUrl = routeurl;
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _previousOnNavigateTask = tcs.Task;
 
-            _locationAbsolute = args.Location;
-            // SCC ADDED - SessionState Check for Unsaved Component
-            if (_renderHandle.IsInitialized && Routes != null && this.RouterSessionService.IsGoodToNavigate)
+            var okToRoute = this.RouterSessionService.CanRoute(this.NavigationManager.Uri, _locationAbsolute, out bool reRoute);
+
+            //  Need to check if we can route
+            if (!OnNavigateAsync.HasDelegate && okToRoute)
             {
-                // Clear the Active Component - the next route will load itself if required
-                this.RouterSessionService.ActiveComponent = null;
-                this.RouterSessionService.NavigationCancelledUrl = null;
-                Refresh(args.IsNavigationIntercepted);
+                Refresh(isNavigationIntercepted);
             }
-            else
+
+            _onNavigateCts = new CancellationTokenSource();
+            var navigateContext = new NavigationContext(path, _onNavigateCts.Token);
+
+            var cancellationTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            navigateContext.CancellationToken.Register(state =>
+                ((TaskCompletionSource)state).SetResult(), cancellationTcs);
+
+            try
             {
-                // SCC ADDED - Trigger a Navigation Cancelled Event on the SessionStateService
-                if (this.RouterSessionService.RouteUrl.Equals(_locationAbsolute, StringComparison.CurrentCultureIgnoreCase))
+                // Task.WhenAny returns a Task<Task> so we need to await twice to unwrap the exception
+                var task = await Task.WhenAny(OnNavigateAsync.InvokeAsync(navigateContext), cancellationTcs.Task);
+                await task;
+                tcs.SetResult();
+                //  Need to check if we can route
+                if (okToRoute)
                 {
-                    // Cancel routing
-                    this.RouterSessionService.TriggerNavigationCancelledEvent();
+                    Refresh(isNavigationIntercepted);
                 }
-                else
-                {
-                    //  we're cancelling routing, but the Navigation Manager is current set to the aborted route
-                    //  so we set the navigation cancelled url so the route can navigate to it if necessary
-                    //  and do a reset trip through the Navigation Manager again to set this back to the original route
-                    //  We need to do this though an async method as at the moment in WASM we are blocking the only thread: other
-                    //  OnLocationChanged events handlers below us in the list haven't yet been called.
-                    //  If we just initiate another navigation event calling NavigationManager.NavigateTo(), components such as NavLinks
-                    //  will receive notification of the second event before the first (and thus highlight the wrong link!)
-                    //  So we make this method async, wrap NavigationManager.NavigateTo() in an async method with a small yielded delay, and await the method.
-                    //  The default delay can be overridden through the IRecordRoutingComponent interface on any component by setting the RouterDelay property.  Default is 50ms.
-                    this.RouterSessionService.NavigationCancelledUrl = this.NavigationManager.Uri;
-                    await ReNavigate();
-                }
+            }
+            catch (Exception e)
+            {
+                _renderHandle.Render(builder => ExceptionDispatchInfo.Throw(e));
+            }
+            // if reroute then do it and exit
+            if (reRoute)
+            {
+                await ReNavigateAsync();
+            }
+        }
+
+        private void OnLocationChanged(object sender, LocationChangedEventArgs args)
+        {
+            _locationAbsolute = args.Location;
+            if (_renderHandle.IsInitialized && Routes != null)
+            {
+                _ = RunOnNavigateAsync(NavigationManager.ToBaseRelativePath(_locationAbsolute), args.IsNavigationIntercepted);
             }
         }
 
@@ -230,12 +308,13 @@ namespace CEC.Routing.Router
         /// NavLinks being one!
         /// </summary>
         /// <returns></returns>
-        private async Task ReNavigate()
+        private async Task ReNavigateAsync()
         {
-            var delay = this.RouterSessionService?.ActiveComponent?.RouterDelay ?? 50;
+            var delay = this.RouterSessionService?.ActiveComponent?.RouterDelay ?? 10;
             await Task.Delay(delay);
             this.NavigationManager.NavigateTo(this.RouterSessionService.RouteUrl);
         }
+
 
         Task IHandleAfterRender.OnAfterRenderAsync()
         {

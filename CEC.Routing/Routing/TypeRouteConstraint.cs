@@ -1,6 +1,8 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace CEC.Routing.Router
 {
     /// <summary>
@@ -9,7 +11,7 @@ namespace CEC.Routing.Router
     /// <typeparam name="T">The type to which the value must be parseable.</typeparam>
     internal class TypeRouteConstraint<T> : RouteConstraint
     {
-        public delegate bool TryParseDelegate(string str, out T result);
+        public delegate bool TryParseDelegate(string str, [MaybeNullWhen(false)] out T result);
 
         private readonly TryParseDelegate _parser;
 
@@ -18,7 +20,7 @@ namespace CEC.Routing.Router
             _parser = parser;
         }
 
-        public override bool Match(string pathSegment, out object convertedValue)
+        public override bool Match(string pathSegment, out object? convertedValue)
         {
             if (_parser(pathSegment, out var result))
             {

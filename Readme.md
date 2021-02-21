@@ -4,15 +4,23 @@
 
 Controlled Routing Library
 
-> Note Version 1.2 is released.  There are some import **Obselete** marked changes.
+> Note Version 5.0.0 is released.  The router and associated classes have been updated to Net5.0 and incorporate all the Net5.0 router and associated class updates.
+
+Removal of Obselete Methods and Properties:
+
+1. `IRecordRoutingComponent.PageUrl`
+2. `EditorComponentBase.PageUrl`
+3. `RouterSessionService.PageUrl`
+4. `RouterSessionService.LastPageUrl`
+5. `RouterSessionService.IntraPageNavigation`
+6. `RouterSessionService.TriggerIntraPageNavigation`
+
 
 This is an enhanced version of the standard Blazor Router.  It adds functionality to control routing on a editor page with unsaved changes.
 
 The package is available on NuGet: CEC.Routing.
 
 The sample project uses the basic Blazor Weather app, implementing a WeatherForecast object editor with navigation control when a Weather Station object is unsaved.  Review the code for a more detailed code example of an implementation of the router.
-
-There is an additional project and library at https://github.com/ShaunCurtis/CEC.FormControls that implements more advanced router control using a set of enhanced form controls.
 
 To implement the router you need to:
 

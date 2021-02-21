@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+#nullable disable warnings
+
 namespace CEC.Routing.Router
 {
     [DebuggerDisplay("Handler = {Handler}, Template = {Template}")]
@@ -25,10 +27,20 @@ namespace CEC.Routing.Router
 
         internal void Match(RouteContext context)
         {
+            string? catchAllValue = null;
+
+            // If this template contains a catch-all parameter, we can concatenate the pathSegments
+            // at and beyond the catch-all segment's position. For example:
+            // Template:        /foo/bar/{*catchAll}
+            // PathSegments:    /foo/bar/one/two/three
+            if (Template.ContainsCatchAllSegment && context.Segments.Length >= Template.Segments.Length)
+            {
+                catchAllValue = string.Join('/', context.Segments[Range.StartAt(Template.Segments.Length - 1)]);
+            }
             // If there are no optional segments on the route and the length of the route
             // and the template do not match, then there is no chance of this matching and
             // we can bail early.
-            if (Template.OptionalSegmentsCount == 0 && Template.Segments.Length != context.Segments.Length)
+            else if (Template.OptionalSegmentsCount == 0 && Template.Segments.Length != context.Segments.Length)
             {
                 return;
             }
@@ -39,7 +51,15 @@ namespace CEC.Routing.Router
             for (var i = 0; i < Template.Segments.Length; i++)
             {
                 var segment = Template.Segments[i];
-                
+
+                if (segment.IsCatchAll)
+                {
+                    numMatchingSegments += 1;
+                    parameters ??= new Dictionary<string, object>(StringComparer.Ordinal);
+                    parameters[segment.Value] = catchAllValue;
+                    break;
+                }
+
                 // If the template contains more segments than the path, then
                 // we may need to break out of this for-loop. This can happen
                 // in one of two cases:
@@ -82,7 +102,7 @@ namespace CEC.Routing.Router
             // In addition to extracting parameter values from the URL, each route entry
             // also knows which other parameters should be supplied with null values. These
             // are parameters supplied by other route entries matching the same handler.
-            if (UnusedRouteParameterNames.Length > 0)
+            if (!Template.ContainsCatchAllSegment && UnusedRouteParameterNames.Length > 0)
             {
                 parameters ??= new Dictionary<string, object>(StringComparer.Ordinal);
                 for (var i = 0; i < UnusedRouteParameterNames.Length; i++)
@@ -112,7 +132,7 @@ namespace CEC.Routing.Router
             // `/this/is/a/template` and the route `/this/`. In that case, we want to ensure
             // that all non-optional segments have matched as well.
             var allNonOptionalSegmentsMatch = numMatchingSegments >= (Template.Segments.Length - Template.OptionalSegmentsCount);
-            if (allRouteSegmentsMatch && allNonOptionalSegmentsMatch)
+            if (Template.ContainsCatchAllSegment || (allRouteSegmentsMatch && allNonOptionalSegmentsMatch))
             {
                 context.Parameters = parameters;
                 context.Handler = Handler;

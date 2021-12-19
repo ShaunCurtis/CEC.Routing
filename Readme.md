@@ -9,3 +9,5 @@ The Repo and information on this solution is here:
 [Blazr.Demo.EditForm Repo](https://github.com/ShaunCurtis/Blazr.Demo.EditForm)
 
 [Building Edit Forms Article](https://shauncurtis.github.io/articles/Building-Edit-Forms.html)
+
+Documentation for this Repo is [here](https://github.com/ShaunCurtis/CEC.Routing/blob/master/CEC-Routing.md)
